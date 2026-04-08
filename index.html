@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>MoodWatch 🎬</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; background: #0d0d1a; color: white; }
+    #home-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; gap: 20px; }
+    #home-screen h1 { font-size: 3rem; color: #ff4d8d; }
+    #home-screen p { color: #aaa; font-size: 1.1rem; }
+    .input-box { padding: 12px 20px; border-radius: 10px; border: none; background: #1e1e3a; color: white; font-size: 1rem; width: 250px; text-align: center; }
+    .btn { padding: 12px 30px; border: none; border-radius: 10px; cursor: pointer; font-size: 1rem; font-weight: bold; transition: 0.2s; }
+    .btn-pink { background: #ff4d8d; color: white; }
+    .btn-blue { background: #4d79ff; color: white; }
+    .btn:hover { opacity: 0.85; }
+    #error-msg { color: #ff4d4d; font-size: 0.9rem; }
+    #watch-screen { display: none; height: 100vh; flex-direction: column; }
+    #top-bar { background: #1a1a2e; padding: 10px 20px; display: flex; align-items: center; justify-content: space-between; }
+    #top-bar h2 { color: #ff4d8d; }
+    #room-code { background: #ff4d8d; padding: 5px 15px; border-radius: 20px; font-weight: bold; font-size: 0.9rem; }
+    #main-area { display: flex; flex: 1; overflow: hidden; }
+    #video-area { flex: 1; display: flex; flex-direction: column; padding: 15px; gap: 10px; }
+    #url-bar { display: flex; gap: 10px; }
+    #video-url-input { flex: 1; padding: 10px; border-radius: 8px; border: none; background: #1e1e3a; color: white; font-size: 0.95rem; }
+    #video-container { flex: 1; background: #000; border-radius: 10px; overflow: hidden; }
+    #video-container iframe { width: 100%; height: 100%; border: none; }
+    #no-video { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: #555; font-size: 1.2rem; }
+    #reactions-bar { display: flex; gap: 10px; justify-content: center; }
+    .reaction-btn { background: #1e1e3a; border: none; font-size: 1.5rem; padding: 8px 15px; border-radius: 20px; cursor: pointer; transition: 0.2s; }
+    .reaction-btn:hover { background: #2e2e5a; transform: scale(1.2); }
+    #reaction-popup { position: fixed; top: 50%; left: 40%; transform: translate(-50%, -50%); font-size: 5rem; pointer-events: none; opacity: 0; transition: opacity 0.5s; z-index: 999; }
+    #reaction-popup.show { opacity: 1; }
+    #chat-area { width: 300px; background: #1a1a2e; display: flex; flex-direction: column; padding: 15px; gap: 10px; }
+    #chat-area h3 { color: #ff4d8d; text-align: center; }
+    #chat-box { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+    .chat-msg { padding: 8px 12px; border-radius: 8px; font-size: 0.9rem; }
+    .chat-msg.me { background: #ff4d8d; align-self: flex-end; }
+    .chat-msg.other { background: #2e2e5a; align-self: flex-start; }
+    .chat-msg.system { background: transparent; color: #888; text-align: center; font-size: 0.8rem; }
+    #chat-input-area { display: flex; gap: 8px; }
+    #chat-input { flex: 1; padding: 8px; border-radius: 8px; border: none; background: #0d0d1a; color: white; font-size: 0.9rem; }
+    #chat-send { background: #ff4d8d; border: none; padding: 8px 12px; border-radius: 8px; color: white; cursor: pointer; font-size: 0.9rem; }
+  </style>
+</head>
+<body>
+
+  <div id="home-screen">
+    <h1>🎬 MoodWatch</h1>
+    <p>Watch movies together with your friends or partner!</p>
+    <button class="btn btn-pink" onclick="createRoom()">✨ Create New Room</button>
+    <div style="display:flex; flex-direction:column; align-items:center; gap:10px;">
+      <input class="input-box" id="join-input" type="text" placeholder="Enter Room Code..." />
+      <button class="btn btn-blue" onclick="joinRoom()">🚪 Join Room</button>
+    </div>
+    <p id="error-msg"></p>
+  </div>
+
+  <div id="watch-screen">
+    <div id="top-bar">
+      <h2>🎬 MoodWatch</h2>
+      <span id="room-code">Room: XXXXXX</span>
+      <input class="input-box" id="name-input" placeholder="Your name..." style="width:150px;" />
+    </div>
+    <div id="main-area">
+      <div id="video-area">
+        <div id="url-bar">
+          <input class="input-box" id="video-url-input" placeholder="Paste YouTube link here..." style="width:auto;" />
+          <button class="btn btn-pink" onclick="loadVideo()">▶ Load</button>
+        </div>
+        <div id="video-container">
+          <div id="no-video">🎬 No video loaded yet</div>
+        </div>
+        <div id="reactions-bar">
+          <button class="reaction-btn" onclick="sendReaction('❤️')">❤️</button>
+          <button class="reaction-btn" onclick="sendReaction('😂')">😂</button>
+          <button class="reaction-btn" onclick="sendReaction('😮')">😮</button>
+          <button class="reaction-btn" onclick="sendReaction('😭')">😭</button>
+          <button class="reaction-btn" onclick="sendReaction('🔥')">🔥</button>
+          <button class="reaction-btn" onclick="sendReaction('👏')">👏</button>
+        </div>
+      </div>
+      <div id="chat-area">
+        <h3>💬 Live Chat</h3>
+        <div id="chat-box"></div>
+        <div id="chat-input-area">
+          <input id="chat-input" type="text" placeholder="Type a message..." />
+          <button id="chat-send" onclick="sendChat()">Send</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="reaction-popup"></div>
+
+  <script src="https://www.youtube.com/iframe_api"></script>
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+    let currentRoom = "";
+    let player = null;
+    let isSyncing = false;
+
+    function createRoom() { socket.emit("create-room"); }
+
+    function joinRoom() {
+      const code = document.getElementById("join-input").value.trim();
+      if (!code) { document.getElementById("error-msg").textContent = "Please enter a room code!"; return; }
+      socket.emit("join-room", { roomId: code });
+    }
+
+    socket.on("room-created", ({ roomId }) => {
+      currentRoom = roomId;
+      document.getElementById("room-code").textContent = "Room: " + roomId;
+      showWatchScreen();
+      addChat("Room created! Share this code with your friend: " + roomId, "system");
+    });
+
+    socket.on("room-joined", ({ roomId, video }) => {
+      currentRoom = roomId;
+      document.getElementById("room-code").textContent = "Room: " + roomId;
+      showWatchScreen();
+      addChat("Successfully joined the room! 🎉", "system");
+      if (video) loadVideoUrl(video);
+    });
+
+    socket.on("error", ({ message }) => { document.getElementById("error-msg").textContent = message; });
+    socket.on("user-joined", ({ message }) => { addChat("Your friend joined! 🎉", "system"); });
+    socket.on("user-left", ({ message }) => { addChat("Your friend left the room 😢", "system"); });
+socket.on("room-full", ({ message }) => { addChat("⚠️ " + message, "system"); });
+    function showWatchScreen() {
+      document.getElementById("home-screen").style.display = "none";
+      document.getElementById("watch-screen").style.display = "flex";
+    }
+
+    function onYouTubeIframeAPIReady() { console.log("YouTube API ready"); }
+
+    function loadVideo() {
+      const url = document.getElementById("video-url-input").value.trim();
+      if (!url) return;
+      const videoId = extractYouTubeId(url);
+      if (!videoId) { alert("Only YouTube links are supported!"); return; }
+      loadVideoUrl(url);
+      socket.emit("video-url", { roomId: currentRoom, url });
+    }
+
+    function loadVideoUrl(url) {
+      const videoId = extractYouTubeId(url);
+      if (!videoId) return;
+      const container = document.getElementById("video-container");
+      container.innerHTML = `<div id="yt-player"></div>`;
+      player = new YT.Player("yt-player", {
+        height: "100%", width: "100%", videoId: videoId,
+        playerVars: { autoplay: 1, controls: 1 },
+        events: { onStateChange: onPlayerStateChange }
+      });
+    }
+
+    function onPlayerStateChange(event) {
+      if (isSyncing) return;
+      const time = player.getCurrentTime();
+      if (event.data === YT.PlayerState.PLAYING) {
+        socket.emit("play", { roomId: currentRoom, time });
+      } else if (event.data === YT.PlayerState.PAUSED) {
+        socket.emit("pause", { roomId: currentRoom, time });
+      }
+    }
+
+    socket.on("video-url", ({ url }) => { loadVideoUrl(url); });
+
+    socket.on("play", ({ time }) => {
+      if (player) {
+        isSyncing = true;
+        player.seekTo(time, true);
+        player.playVideo();
+        setTimeout(() => isSyncing = false, 1000);
+      }
+    });
+
+    socket.on("pause", ({ time }) => {
+      if (player) {
+        isSyncing = true;
+        player.seekTo(time, true);
+        player.pauseVideo();
+        setTimeout(() => isSyncing = false, 1000);
+      }
+    });
+
+    function sendChat() {
+      const msg = document.getElementById("chat-input").value.trim();
+      const name = document.getElementById("name-input").value.trim() || "You";
+      if (!msg) return;
+      socket.emit("chat", { roomId: currentRoom, message: msg, name });
+      addChat("You: " + msg, "me");
+      document.getElementById("chat-input").value = "";
+    }
+
+    socket.on("chat", ({ message, name }) => { addChat(name + ": " + message, "other"); });
+
+    function addChat(text, type) {
+      const box = document.getElementById("chat-box");
+      const div = document.createElement("div");
+      div.classList.add("chat-msg", type);
+      div.textContent = text;
+      box.appendChild(div);
+      box.scrollTop = box.scrollHeight;
+    }
+
+    document.getElementById("chat-input").addEventListener("keypress", (e) => {
+      if (e.key === "Enter") sendChat();
+    });
+
+    function sendReaction(emoji) {
+      showReaction(emoji);
+      socket.emit("reaction", { roomId: currentRoom, emoji });
+    }
+
+    socket.on("reaction", ({ emoji }) => { showReaction(emoji); });
+
+    function showReaction(emoji) {
+      const popup = document.getElementById("reaction-popup");
+      popup.textContent = emoji;
+      popup.classList.add("show");
+      setTimeout(() => popup.classList.remove("show"), 1500);
+    }
+
+    function extractYouTubeId(url) {
+      const regex = /(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)/;
+      const match = url.match(regex);
+      return match ? match[1] : null;
+    }
+  </script>
+</body>
+</html>
